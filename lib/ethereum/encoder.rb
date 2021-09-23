@@ -21,10 +21,16 @@ module Ethereum
     end
 
     def encode_dynamic_array(array_subtype, array)
-      location = encode_uint(@inputs ? size_of_inputs(@inputs) + @tail.size/2 : 32)
+      location = encode_uint(@inputs ? size_of_inputs(@inputs) + @tail.size / 2 : 32)
       size = encode_uint(array.size)
       data = array.inject("") { |a, e| a << encode(array_subtype, e) }
       [location, size + data]
+    end
+
+    def encode_tuple(value, _ = nil)
+      res = []
+      value.each { |a| res << tuple_encode(a) }
+      res.join
     end
 
     def encode_int(value, _ = nil)
@@ -46,7 +52,7 @@ module Ethereum
     end
 
     def do_encode_fixed(value, n)
-      encode_uint((value * 2**n).to_i)
+      encode_uint((value * 2 ** n).to_i)
     end
 
     def encode_ufixed(_value, _)
@@ -58,25 +64,25 @@ module Ethereum
     end
 
     def encode_static_bytes(value)
-      value.bytes.map {|x| x.to_s(16).rjust(2, '0')}.join("").ljust(64, '0')
+      value.bytes.map { |x| x.to_s(16).rjust(2, '0') }.join("").ljust(64, '0')
     end
 
     def encode_dynamic_bytes(value)
-      location = encode_uint(@inputs ? size_of_inputs(@inputs) + @tail.size/2 : 32)
+      location = encode_uint(@inputs ? size_of_inputs(@inputs) + @tail.size / 2 : 32)
       size = encode_uint(value.size)
       content = encode_static_bytes(value)
       [location, size + content]
     end
 
-    def encode_string(value, _)
-      location = encode_uint(@inputs ? size_of_inputs(@inputs) + @tail.size/2 : 32)
+    def encode_string(value, _ = nil)
+      location = encode_uint(@inputs ? size_of_inputs(@inputs) + @tail.size / 2 : 32)
       size = encode_uint(value.bytes.size)
-      content = value.bytes.map {|x| x.to_s(16).rjust(2, '0')}.join("").ljust(64, '0')
+      content = value.bytes.map { |x| x.to_s(16).rjust(2, '0') }.join("").ljust(64, '0')
       [location, size + content]
     end
 
-    def encode_address(value, _)
-      value = "0" * 24 + value.gsub(/^0x/,'')
+    def encode_address(value, _ = nil)
+      value = "0" * 24 + value.gsub(/^0x/, '')
       raise ArgumentError if value.size != 64
       value
     end
@@ -103,16 +109,29 @@ module Ethereum
     end
 
     private
-      def to_twos_complement(number)
-        (number & ((1 << 256) - 1))
-      end
 
-      def size_of_inputs(inputs)
-        inputs.map do |input|
-          _, arity, _ = Abi::parse_array_type(input.type)
-          arity.nil? ? 32 : arity * 32
-        end.inject(:+)
+    def to_twos_complement(number)
+      (number & ((1 << 256) - 1))
+    end
+
+    def size_of_inputs(inputs)
+      inputs.map do |input|
+        _, arity, _ = Abi::parse_array_type(input.type)
+        arity.nil? ? 32 : arity * 32
+      end.inject(:+)
+    end
+
+    def tuple_encode value
+      if value.class == String
+        return encode_address(value) if value.start_with? '0x'
+        encode_string value
+      elsif value.class == Integer
+        return encode_uint value
+      else
+        # @TODO other class
       end
+    end
+
   end
 
 end

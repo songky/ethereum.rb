@@ -162,7 +162,12 @@ module Ethereum
     end
 
     def call_payload(fun, args)
-      "0x" + fun.signature + (@encoder.encode_arguments(fun.inputs, args).presence || "0"*64)
+      if fun.name.to_s == 'createAuction'
+        # @TODO change this
+        "0x7a3c8531" + (@encoder.encode_arguments(fun.inputs, args).presence || "0"*64)
+      else
+        "0x" + fun.signature + (@encoder.encode_arguments(fun.inputs, args).presence || "0"*64)
+      end
     end
 
     def call_args(fun, args)
