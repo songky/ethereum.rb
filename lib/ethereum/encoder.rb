@@ -115,8 +115,13 @@ module Ethereum
     end
 
     def size_of_inputs(inputs)
+      # @TODO temp method, to be changed to dynamic implementation
       inputs.map do |input|
-        _, arity, _ = Abi::parse_array_type(input.type)
+        if input.type == 'tuple'
+          arity = 4
+        else
+          _, arity, _ = Abi::parse_array_type(input.type)
+        end
         arity.nil? ? 32 : arity * 32
       end.inject(:+)
     end
